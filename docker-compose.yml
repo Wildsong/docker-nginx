@@ -1,0 +1,65 @@
+version: '3.7'
+volumes:
+  cache:
+      name: mapproxy_cache
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+
+  client1:
+    image: nginx:latest
+    expose:
+      - 80
+    env_file:
+      - .env
+    volumes:
+      - ./client1_content:/usr/share/nginx/html
+    labels:
+      caddy: maps.${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+      caddy.tls.protocols: "tls1.3"
+    networks:
+      - proxy
+
+  mapproxy:
+    image: wildsong/mapproxy_server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.mapproxy_server
+    expose: 
+      - 8080
+    env_file: 
+      - .env
+    volumes:
+      - ./mapproxy_config:/srv/mapproxy/config:ro
+      - cache:/srv/mapproxy/cache
+    # This will be passed to start_mapproxy.py and
+    # points to a folder, so mapproxy will start as a multiservice.
+    command: ['/srv/mapproxy/config/services']
+    networks:
+      proxy:
+        aliases:
+          - mapproxy
+      
+  client2:
+    image: nginx:latest
+    expose:
+      - 80
+    env_file:
+      - .env
+    volumes:
+      # Override the standard file, so we can load the image_filter module.
+      - ./nginx_image_filter.conf:/etc/nginx/nginx.conf
+      - ./host.conf:/etc/nginx/conf.d/default.conf
+      - ./static_content:/srv/static
+    labels:
+      caddy: arctic.${DOMAIN}
+      caddy.reverse_proxy: "{{upstreams 80}}"
+      caddy.tls.protocols: "tls1.3"
+    networks:
+      - proxy
+
