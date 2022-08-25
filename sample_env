@@ -1,0 +1,4 @@
+SERVER=giscache
+DOMAIN=co.clatsop.or.us
+NETWORK_NAME=proxy_net
+
