@@ -12,6 +12,7 @@ networks:
 services:
 
   server:
+    container_name: nginx
     image: nginx:latest
     expose:
       - 80
